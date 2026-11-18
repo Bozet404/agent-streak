@@ -34,7 +34,8 @@ Agent ID is the gate **and** the identity of the whole dApp:
 |---|---|
 | Contract | `AgentStreak` (`contracts/AgentStreak.sol`) |
 | Network | BNB Smart Chain mainnet (chain id 56) |
-| Address | **TBD — fill in after deployment** |
+| Address | [`0x354D387C50F130B4297C2ED5bF658af1caFbB83B`](https://bscscan.com/address/0x354D387C50F130B4297C2ED5bF658af1caFbB83B) (deployed 2026-11-18) |
+| Owner | `0xA0040b85F1F9Ae44956D748472B80daD70EC3C56` (user's Agent ID wallet) |
 | Agent ID registry | `0x60b9262456de011f7d15a54cdd8c48baaa8b022f` |
 | Token | `Agent Streak Badge` (`STREAK`), ERC-721 soulbound |
 | BscScan | verify with `flattened/AgentStreak.flattened.sol` (Solidity 0.8.24, optimizer on, 200 runs) |
@@ -69,7 +70,7 @@ no server, no keys. Deploy it anywhere static hosting works — e.g. GitHub Page
 - Wallet: injected provider only (`window.ethereum`, e.g. Binance Wallet /
   MetaMask). **No WalletConnect, no QR login, no session storage.**
 - The contract address lives in exactly one place: the `CONFIG` object at the
-  top of `web/app.js` (placeholder `0x000…` until deployment).
+  top of `web/app.js` (set to the deployed address).
 - Reads (leaderboard, recent check-ins) use a public RPC so they work without
   a wallet connected.
 

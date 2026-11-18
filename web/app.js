@@ -7,7 +7,7 @@
 // CONFIG — the contract address lives ONLY here. Fill it in after deployment.
 // ---------------------------------------------------------------------------
 const CONFIG = {
-  CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000", // TODO: set after mainnet deploy
+  CONTRACT_ADDRESS: "0x354D387C50F130B4297C2ED5bF658af1caFbB83B", // deployed 2026-11-18 (BSC mainnet)
   AGENT_ID_ADDRESS: "0x60b9262456de011f7d15a54cdd8c48baaa8b022f",
   CHAIN_ID: 56,
   RPC_URL: "https://bsc-dataseed.binance.org",
