@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Streak — Daily Check-ins for Agent ID Holders</title>
+  <meta name="description" content="Check in once a day, build your streak, earn soulbound badges. Only Agent ID holders can play. Check-ins cost gas only." />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.14.0/dist/ethers.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🔥 Agent Streak</div>
+    <div class="top-actions">
+      <span id="networkBadge" class="network-badge">Not connected</span>
+      <button id="connectBtn" class="btn btn-primary">Connect Wallet</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Show up every day.<br />Build your streak.</h1>
+      <p class="hero-sub">
+        Agent Streak is a daily check-in game for Agent ID holders. Check in once per
+        UTC day, grow your streak, and claim soulbound badges at 3, 7, 14, 30, 60 and
+        90 days. Your Agent ID is your pass — and your identity.
+      </p>
+      <div id="deployBanner" class="banner hidden">
+        The Agent Streak contract is not deployed yet. Leaderboard and check-ins will
+        unlock once the contract address is set.
+      </div>
+      <div class="how">
+        <div class="step"><span class="step-num">1</span><h3>Hold an Agent ID</h3><p>Only addresses holding an Agent ID can check in.</p></div>
+        <div class="step"><span class="step-num">2</span><h3>Check in daily</h3><p>One check-in per UTC day. Miss a day and your streak resets to 1.</p></div>
+        <div class="step"><span class="step-num">3</span><h3>Claim badges</h3><p>Hit a milestone to mint a soulbound badge. It can never be transferred.</p></div>
+      </div>
+    </section>
+
+    <section class="cards">
+      <div class="card" id="idCard">
+        <h2>Agent ID</h2>
+        <p id="idStatus" class="big">Connect your wallet to check</p>
+        <p id="idAddress" class="muted"></p>
+      </div>
+      <div class="card" id="streakCard">
+        <h2>Your Streak</h2>
+        <div class="stats">
+          <div><span class="stat-num" id="statCurrent">–</span><span class="stat-label">Current streak</span></div>
+          <div><span class="stat-num" id="statMax">–</span><span class="stat-label">Best streak</span></div>
+          <div><span class="stat-num" id="statTotal">–</span><span class="stat-label">Total check-ins</span></div>
+        </div>
+        <p class="muted" id="nextCheckin">Next check-in opens at 00:00 UTC.</p>
+        <button id="checkinBtn" class="btn btn-accent" disabled>Check In</button>
+        <p class="muted small">Check-ins cost gas only. No token, no rewards promised.</p>
+      </div>
+      <div class="card" id="globalCard">
+        <h2>Everyone</h2>
+        <div class="stats">
+          <div><span class="stat-num" id="statParticipants">–</span><span class="stat-label">Participants</span></div>
+          <div><span class="stat-num" id="statCountdown">–</span><span class="stat-label">Until next day (UTC)</span></div>
+        </div>
+        <p class="muted">Streaks are counted in UTC days. A new day starts at 00:00 UTC.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Milestone Badges</h2>
+      <p class="muted">Soulbound ERC-721 badges with fully on-chain art. One per milestone, yours forever — they cannot be transferred.</p>
+      <div id="badgeGrid" class="badge-grid"></div>
+    </section>
+
+    <section>
+      <h2>Leaderboard — Top Streaks</h2>
+      <p class="muted">Ranked by best streak, then total check-ins.</p>
+      <div id="leaderboard" class="leaderboard"><p class="muted">Loading…</p></div>
+    </section>
+
+    <section>
+      <h2>Recent Check-ins</h2>
+      <div id="recent" class="recent"><p class="muted">Loading…</p></div>
+    </section>
+
+    <p id="statusMsg" class="status-msg"></p>
+  </main>
+
+  <footer>
+    <p>Agent Streak — a community dApp for Agent ID holders. Open source. Check-ins cost gas only.</p>
+    <p>No token, no rewards promised. Never share your seed phrase or private key with anyone.</p>
+    <p><a id="contractLink" href="#" target="_blank" rel="noopener">Contract on BscScan</a> · <a href="https://github.com/Bozet404/agent-streak" target="_blank" rel="noopener">GitHub</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
