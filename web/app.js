@@ -213,7 +213,7 @@ async function renderBadges() {
 // ---------------------------------------------------------------------------
 async function connect() {
   if (!window.ethereum) {
-    setStatus("No injected wallet detected. Please install a wallet extension and refresh.", true);
+    setStatus("No wallet found in this browser. On your phone, open this page inside the Binance Wallet app browser or the MetaMask app browser. On desktop, install the Binance Wallet or MetaMask extension, then refresh.", true);
     return;
   }
   try {
@@ -354,8 +354,29 @@ function tickCountdown() {
 }
 
 async function init() {
-  readProvider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
-  agentIdContract = new ethers.Contract(CONFIG.AGENT_ID_ADDRESS, AGENT_ID_ABI, readProvider);
+  // Buttons first: the page must always respond, even if the chain is unreachable.
+  $("connectBtn").addEventListener("click", connect);
+  $("checkinBtn").addEventListener("click", checkIn);
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
+
+  if (typeof ethers === "undefined") {
+    setStatus("Could not load the wallet library. Check your connection and refresh the page.", true);
+    $("leaderboard").innerHTML = '<p class="muted">Leaderboard could not be loaded. Please refresh and try again.</p>';
+    $("recent").innerHTML = '<p class="muted">Recent check-ins could not be loaded. Please refresh and try again.</p>';
+    await renderBadges();
+    return;
+  }
+
+  try {
+    readProvider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+    agentIdContract = new ethers.Contract(CONFIG.AGENT_ID_ADDRESS, AGENT_ID_ABI, readProvider);
+  } catch (e) {
+    setStatus("Could not reach the network. Please refresh and try again.", true);
+    await renderBadges();
+    return;
+  }
+
   if (DEPLOYED) {
     readContract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, STREAK_ABI, readProvider);
     $("contractLink").href = CONFIG.BSCSCAN + "/address/" + CONFIG.CONTRACT_ADDRESS;
@@ -367,13 +388,21 @@ async function init() {
     $("recent").innerHTML = '<p class="muted">Recent check-ins unlock once the contract is deployed.</p>';
   }
 
-  $("connectBtn").addEventListener("click", connect);
-  $("checkinBtn").addEventListener("click", checkIn);
-  tickCountdown();
-  setInterval(tickCountdown, 1000);
-
   await renderBadges();
-  await loadPublic();
+  // Public reads must not hang forever: 20s cap, then show a retry hint.
+  try {
+    await Promise.race([
+      loadPublic(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("load timeout")), 20000)),
+    ]);
+  } catch (e) {
+    if ($("leaderboard").textContent.includes("Loading")) {
+      $("leaderboard").innerHTML = '<p class="muted">Leaderboard could not be loaded. Please refresh and try again.</p>';
+    }
+    if ($("recent").textContent.includes("Loading")) {
+      $("recent").innerHTML = '<p class="muted">Recent check-ins could not be loaded. Please refresh and try again.</p>';
+    }
+  }
 }
 
 init();
