@@ -20,7 +20,7 @@ const CONFIG = {
   ],
   BSCSCAN: "https://bscscan.com",
   MILESTONES: [3, 7, 14, 30, 60, 90],
-  RECENT_BLOCKS: 20000,
+  RECENT_BLOCKS: 10000,
   LEADERBOARD_TOP: 50,
 };
 
@@ -161,27 +161,40 @@ async function loadLeaderboard() {
   }
 }
 
+// Query CheckIn logs, trying each read endpoint in turn: one node
+// rate-limiting eth_getLogs must not kill the whole section.
+async function queryCheckIns(from, to) {
+  const CHUNK = 5000;
+  let lastError = null;
+  for (const url of CONFIG.RPC_URLS) {
+    try {
+      const provider = new ethers.JsonRpcProvider(url);
+      const contract = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, STREAK_ABI, provider);
+      const events = [];
+      for (let start = from; start <= to; start += CHUNK) {
+        const end = Math.min(to, start + CHUNK - 1);
+        const chunk = await Promise.race([
+          contract.queryFilter(contract.filters.CheckIn, start, end),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("log query timeout")), 15000)
+          ),
+        ]);
+        events.push(...chunk);
+      }
+      return events;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError || new Error("log query failed");
+}
+
 async function loadRecent() {
   const box = $("recent");
   try {
     const latest = await readProvider.getBlockNumber();
     const from = Math.max(0, latest - CONFIG.RECENT_BLOCKS);
-    // Query in small chunks: some endpoints rate-limit wide eth_getLogs ranges.
-    const events = [];
-    const CHUNK = 5000;
-    for (let start = from; start <= latest; start += CHUNK) {
-      const end = Math.min(latest, start + CHUNK - 1);
-      try {
-        const chunk = await readContract.queryFilter(
-          readContract.filters.CheckIn,
-          start,
-          end
-        );
-        events.push(...chunk);
-      } catch (e) {
-        // One failed chunk must not kill the rest.
-      }
-    }
+    const events = await queryCheckIns(from, latest);
     const last = events.slice(-20).reverse();
     if (last.length === 0) {
       box.innerHTML = '<p class="muted">No check-ins in the recent blocks yet.</p>';
@@ -298,7 +311,8 @@ async function connect() {
     $("connectBtn").textContent = shortAddr(userAddress);
     $("networkBadge").textContent = "BSC Mainnet";
     $("networkBadge").classList.add("ok");
-    $("idAddress").textContent = userAddress;
+    $("idAddress").textContent = shortAddr(userAddress);
+    $("idAddress").title = userAddress;
 
     window.ethereum.on("accountsChanged", () => window.location.reload());
     window.ethereum.on("chainChanged", () => window.location.reload());
@@ -431,11 +445,11 @@ async function init() {
   }
 
   await renderBadges();
-  // Public reads must not hang forever: 20s cap, then show a retry hint.
+  // Public reads must not hang forever: 60s cap, then show a retry hint.
   try {
     await Promise.race([
       loadPublic(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("load timeout")), 20000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("load timeout")), 60000)),
     ]);
   } catch (e) {
     if ($("leaderboard").textContent.includes("Loading")) {
