@@ -10,7 +10,14 @@ const CONFIG = {
   CONTRACT_ADDRESS: "0x354D387C50F130B4297C2ED5bF658af1caFbB83B", // deployed 2026-11-18 (BSC mainnet)
   AGENT_ID_ADDRESS: "0x60b9262456de011f7d15a54cdd8c48baaa8b022f",
   CHAIN_ID: 56,
-  RPC_URL: "https://bsc-dataseed.binance.org",
+  RPC_URL: "https://rpc-bsc.48.club",
+  // Read endpoints in order: Binance dataseed rate-limits eth_getLogs (-32005),
+  // so reads prefer 48.club, then publicnode, then dataseed as a last resort.
+  RPC_URLS: [
+    "https://rpc-bsc.48.club",
+    "https://bsc-rpc.publicnode.com",
+    "https://bsc-dataseed.binance.org",
+  ],
   BSCSCAN: "https://bscscan.com",
   MILESTONES: [3, 7, 14, 30, 60, 90],
   RECENT_BLOCKS: 20000,
@@ -77,6 +84,26 @@ function nextUtcMidnight() {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
 }
 
+// Pick the first read endpoint that answers, so one rate-limited node
+// cannot take the whole page down.
+async function pickReadProvider() {
+  for (const url of CONFIG.RPC_URLS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url);
+      await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("rpc timeout")), 8000)
+        ),
+      ]);
+      return p;
+    } catch (e) {
+      // Try the next endpoint.
+    }
+  }
+  return new ethers.JsonRpcProvider(CONFIG.RPC_URLS[0]);
+}
+
 // ---------------------------------------------------------------------------
 // Public data (no wallet needed)
 // ---------------------------------------------------------------------------
@@ -139,7 +166,22 @@ async function loadRecent() {
   try {
     const latest = await readProvider.getBlockNumber();
     const from = Math.max(0, latest - CONFIG.RECENT_BLOCKS);
-    const events = await readContract.queryFilter(readContract.filters.CheckIn, from, latest);
+    // Query in small chunks: some endpoints rate-limit wide eth_getLogs ranges.
+    const events = [];
+    const CHUNK = 5000;
+    for (let start = from; start <= latest; start += CHUNK) {
+      const end = Math.min(latest, start + CHUNK - 1);
+      try {
+        const chunk = await readContract.queryFilter(
+          readContract.filters.CheckIn,
+          start,
+          end
+        );
+        events.push(...chunk);
+      } catch (e) {
+        // One failed chunk must not kill the rest.
+      }
+    }
     const last = events.slice(-20).reverse();
     if (last.length === 0) {
       box.innerHTML = '<p class="muted">No check-ins in the recent blocks yet.</p>';
@@ -369,7 +411,7 @@ async function init() {
   }
 
   try {
-    readProvider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+    readProvider = await pickReadProvider();
     agentIdContract = new ethers.Contract(CONFIG.AGENT_ID_ADDRESS, AGENT_ID_ABI, readProvider);
   } catch (e) {
     setStatus("Could not reach the network. Please refresh and try again.", true);
